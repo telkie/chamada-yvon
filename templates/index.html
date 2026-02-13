@@ -30,19 +30,46 @@
         .btn-camera { background-color: #3498db; color: white; }
         .btn-save { background-color: #2ecc71; color: white; }
 
-        /* LOADING OVERLAY (NOVIDADE) */
+        /* LOADING */
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .spinner-custom { width: 3rem; height: 3rem; border: 5px solid #333; border-top: 5px solid #2ecc71; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* CÂMERA E CHARME */
+        /* CÂMERA FULLSCREEN */
         #qr-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 2000; display: none; flex-direction: column; }
-        #reader { width: 100%; flex-grow: 1; background: black; }
-        .qr-controls { padding: 20px; background: #1e1e1e; text-align: center; }
-        #aluno-found-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2001; display: none; align-items: center; justify-content: center; flex-direction: column; }
-        .aluno-found-name { font-size: 2rem; color: #2ecc71; font-weight: bold; margin-bottom: 20px; text-align: center; }
-        .btn-big-check { width: 100px; height: 100px; border-radius: 50%; font-size: 40px; background: #2ecc71; color: white; border: none; box-shadow: 0 0 30px #2ecc71; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        #reader { width: 100%; flex-grow: 1; background: black; position: relative; }
+        
+        /* BOTÃO FECHAR CÂMERA (Topo) */
+        .camera-header { position: absolute; top: 20px; left: 20px; z-index: 2005; }
+        .btn-close-cam { background: rgba(0,0,0,0.5); color: white; border: 1px solid white; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; }
+
+        /* BARRA INFERIOR DE DETECÇÃO (O NOVO RECURSO) */
+        #detected-bar {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            border-top: 2px solid #2ecc71;
+            padding: 20px;
+            z-index: 2010;
+            display: none; /* Escondido até achar alguém */
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
+        }
+        .detected-info { display: flex; flex-direction: column; }
+        .detected-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+        .detected-name { font-size: 1.4rem; color: #fff; font-weight: bold; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .btn-speak-check {
+            width: 60px; height: 60px; border-radius: 50%;
+            background-color: #2ecc71; color: white; border: none;
+            font-size: 24px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+
     </style>
 </head>
 <body>
@@ -85,18 +112,20 @@
     </div>
 
     <div id="qr-overlay">
-        <div id="reader"></div>
-        <div class="qr-controls">
-            <h4 class="text-light">Aponte para o QR Code</h4>
-            <button class="btn btn-secondary w-100 mt-2" onclick="fecharCamera()">Fechar</button>
+        <div class="camera-header">
+            <button class="btn-close-cam" onclick="fecharCamera()"><i class="fas fa-times"></i></button>
         </div>
-    </div>
-
-    <div id="aluno-found-overlay">
-        <div class="text-light mb-2">Aluno Identificado:</div>
-        <div class="aluno-found-name" id="found-name">...</div>
-        <button class="btn-big-check" onclick="confirmarAlunoScan()"><i class="fas fa-check"></i></button>
-        <button class="btn btn-link text-muted mt-4" onclick="fecharFound()">Cancelar</button>
+        <div id="reader"></div>
+        
+        <div id="detected-bar">
+            <div class="detected-info">
+                <span class="detected-label">Aluno Identificado</span>
+                <span class="detected-name" id="bar-name">...</span>
+            </div>
+            <button class="btn-speak-check" onclick="falarNomeAtual()">
+                <i class="fas fa-volume-up"></i>
+            </button>
+        </div>
     </div>
 
     <script>
@@ -106,19 +135,20 @@
         let selecionados = new Set();
         let turmaAtual = "";
         let html5QrcodeScanner = null;
-        let scannedIdTemp = null;
-        let scannedNameTemp = null;
+        
+        // Variáveis para controlar o fluxo contínuo
+        let lastScannedId = null;
+        let lastScanTime = 0;
+        let currentDetectedName = ""; // Nome focado na barra
+        const SCAN_DELAY = 2000; // Tempo em ms para não ler o mesmo código seguidamente
+
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // --- LOADING CONTROL ---
-        function showLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-        }
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
+        // --- LOADING ---
+        function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
-        // AUTO-SELECT
+        // --- AUTO-INIT ---
         window.onload = function() {
             const select = document.getElementById('select-turma');
             if (select.options.length > 1) {
@@ -127,6 +157,7 @@
             }
         }
 
+        // --- AUDIO ---
         function playBeep() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const oscillator = audioCtx.createOscillator();
@@ -146,10 +177,17 @@
             utterance.rate = 1.1;
             window.speechSynthesis.speak(utterance);
         }
-        
+
+        function falarNomeAtual() {
+            if (currentDetectedName) {
+                playBeep();
+                falarNome(currentDetectedName);
+            }
+        }
+
+        // --- SOCKETS ---
         function mudarTurma() {
             const t = document.getElementById('select-turma').value;
-            // Mostra loading na lista, mas não bloqueia a tela inteira pra isso (opcional)
             document.getElementById('lista-alunos').innerHTML = '<div class="text-center mt-5 text-success">Baixando lista... <i class="fas fa-circle-notch fa-spin"></i></div>';
             socket.emit('selecionar_turma', { turma: t });
         }
@@ -163,17 +201,8 @@
             renderizarLista();
         });
 
-        socket.on('sucesso', (data) => {
-            hideLoading(); // Libera a tela
-            alert(data.msg);
-            selecionados.clear();
-            renderizarLista();
-        });
-
-        socket.on('erro', (msg) => {
-            hideLoading(); // Libera a tela em caso de erro também
-            alert(msg.msg);
-        });
+        socket.on('sucesso', (data) => { hideLoading(); alert(data.msg); selecionados.clear(); renderizarLista(); });
+        socket.on('erro', (msg) => { hideLoading(); alert(msg.msg); });
 
         function renderizarLista() {
             const container = document.getElementById('lista-alunos');
@@ -204,10 +233,7 @@
             if (!turmaAtual) return alert("Selecione a turma!");
             const dt = document.getElementById('data-picker').value;
             if (!checkSabado(dt)) return alert("🚫 Esta data NÃO é um sábado!");
-            
-            // ATIVAR LOADING
             showLoading();
-            
             socket.emit('registrar_chamada', { tipo: 'presenca', turma_atual: turmaAtual, data: dt, presentes: Array.from(selecionados) });
         }
 
@@ -215,27 +241,31 @@
             if (!turmaAtual) return alert("Selecione a turma!");
             const dt = document.getElementById('data-picker').value;
             if (!checkSabado(dt)) return alert("🚫 Esta data NÃO é um sábado!");
-            
-            if(confirm("Confirmar SEM AULA?")) {
-                showLoading(); // ATIVAR LOADING
-                socket.emit('registrar_chamada', { tipo: 'sem_aula', turma_atual: turmaAtual, data: dt });
-            }
+            if(confirm("Confirmar SEM AULA?")) { showLoading(); socket.emit('registrar_chamada', { tipo: 'sem_aula', turma_atual: turmaAtual, data: dt }); }
         }
 
-        // --- CÂMERA ---
+        // --- CÂMERA CONTÍNUA ---
         function abrirCamera() {
             if (!turmaAtual) return alert("Selecione uma turma primeiro!");
             
             if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                alert("⚠️ USE HTTPS (NGROK) PARA HABILITAR A CÂMERA");
+                alert("⚠️ USE HTTPS (NGROK) PARA CÂMERA FUNCIONAR");
             }
 
             document.getElementById('qr-overlay').style.display = 'flex';
+            
+            // Inicia o scanner
             html5QrcodeScanner = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0 
+            };
+            
+            // Nota: onScanSuccess é chamado repetidamente enquanto houver QR code
             html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
             .catch(err => {
-                alert("Erro ao abrir câmera: " + err);
+                alert("Erro câmera: " + err);
                 fecharCamera();
             });
         }
@@ -244,6 +274,7 @@
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     document.getElementById('qr-overlay').style.display = 'none';
+                    document.getElementById('detected-bar').style.display = 'none';
                 }).catch(err => {
                     document.getElementById('qr-overlay').style.display = 'none';
                 });
@@ -253,34 +284,40 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            html5QrcodeScanner.pause();
+            const now = Date.now();
             const idLido = decodedText.trim();
-            const nomeEncontrado = mapaIds[idLido];
-            if (nomeEncontrado) {
-                scannedNameTemp = nomeEncontrado;
-                document.getElementById('qr-overlay').style.display = 'none'; 
-                document.getElementById('found-name').innerText = nomeEncontrado;
-                document.getElementById('aluno-found-overlay').style.display = 'flex';
-            } else {
-                alert("ID não encontrado: " + idLido);
-                html5QrcodeScanner.resume();
+
+            // Lógica para evitar ler o mesmo ID mil vezes por segundo
+            // Se for o mesmo ID e passaram menos de 2 segundos, ignora
+            if (idLido === lastScannedId && (now - lastScanTime < SCAN_DELAY)) {
+                return;
             }
-        }
 
-        function confirmarAlunoScan() {
-            playBeep();
-            falarNome(scannedNameTemp);
-            selecionados.add(scannedNameTemp);
-            renderizarLista();
-            document.getElementById('aluno-found-overlay').style.display = 'none';
-            document.getElementById('qr-overlay').style.display = 'flex';
-            html5QrcodeScanner.resume();
-        }
+            const nomeEncontrado = mapaIds[idLido];
 
-        function fecharFound() {
-            document.getElementById('aluno-found-overlay').style.display = 'none';
-            document.getElementById('qr-overlay').style.display = 'flex';
-            html5QrcodeScanner.resume();
+            if (nomeEncontrado) {
+                // Atualiza variáveis de controle
+                lastScannedId = idLido;
+                lastScanTime = now;
+                currentDetectedName = nomeEncontrado;
+
+                // 1. AUTO-SELEÇÃO: Marca o aluno imediatamente
+                if (!selecionados.has(nomeEncontrado)) {
+                    selecionados.add(nomeEncontrado);
+                    renderizarLista(); // Atualiza a contagem visualmente atrás da câmera
+                    // Vibraçãozinha pra confirmar leitura (se celular suportar)
+                    if (navigator.vibrate) navigator.vibrate(200);
+                }
+
+                // 2. MOSTRA BARRA INFERIOR
+                const bar = document.getElementById('detected-bar');
+                document.getElementById('bar-name').innerText = nomeEncontrado;
+                bar.style.display = 'flex';
+
+            } else {
+                // Se leu um QR Code inválido, não faz nada ou avisa levemente
+                console.log("QR Code desconhecido:", idLido);
+            }
         }
     </script>
 </body>
