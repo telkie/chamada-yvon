@@ -3,322 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chamada Yvon 🌳</title>
+    <title>Yvon Costa 🌳</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; padding-bottom: 120px; }
-        
-        /* HEADER */
-        .top-panel { position: sticky; top: 0; z-index: 900; background-color: #121212; padding: 10px; border-bottom: 1px solid #333; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .user-bar { font-size: 0.8rem; color: #888; display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .btn-sair { color: #ff6b6b; text-decoration: none; }
-        
-        /* CARD ALUNO */
-        .aluno-card { background-color: #1e1e1e; border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.1s; }
-        .aluno-card.selected { background-color: #052c18; border-color: #0f5132; }
-        .check-icon { opacity: 0; color: #2ecc71; transform: scale(0.5); transition: 0.2s; }
-        .aluno-card.selected .check-icon { opacity: 1; transform: scale(1.2); }
-
-        /* FABs */
-        .fab-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 1000; }
-        .fab { width: 65px; height: 65px; border-radius: 50%; border: none; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
-        .fab:active { transform: scale(0.9); }
-        .btn-camera { background-color: #3498db; color: white; }
-        .btn-save { background-color: #2ecc71; color: white; }
-
-        /* LOADING */
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .spinner-custom { width: 3rem; height: 3rem; border: 5px solid #333; border-top: 5px solid #2ecc71; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* CÂMERA FULLSCREEN */
-        #qr-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 2000; display: none; flex-direction: column; }
-        #reader { width: 100%; flex-grow: 1; background: black; position: relative; }
-        
-        /* BOTÃO FECHAR CÂMERA (Topo) */
-        .camera-header { position: absolute; top: 20px; left: 20px; z-index: 2005; }
-        .btn-close-cam { background: rgba(0,0,0,0.5); color: white; border: 1px solid white; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; }
-
-        /* BARRA INFERIOR DE DETECÇÃO (O NOVO RECURSO) */
-        #detected-bar {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(20, 20, 20, 0.95);
-            border-top: 2px solid #2ecc71;
-            padding: 20px;
-            z-index: 2010;
-            display: none; /* Escondido até achar alguém */
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
-            transition: transform 0.3s ease;
-        }
-        .detected-info { display: flex; flex-direction: column; }
-        .detected-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-        .detected-name { font-size: 1.4rem; color: #fff; font-weight: bold; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .btn-speak-check {
-            width: 60px; height: 60px; border-radius: 50%;
-            background-color: #2ecc71; color: white; border: none;
-            font-size: 24px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
-            animation: pulse-green 2s infinite;
-        }
-        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
-
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
-    <div id="loading-overlay">
-        <div class="spinner-custom"></div>
-        <h4 class="text-light fw-bold">Enviando...</h4>
-        <small class="text-muted">Por favor, aguarde.</small>
+    <div id="loading">
+        <div class="spinner-border text-success" role="status"></div>
+        <div class="mt-2 text-white">Processando...</div>
     </div>
 
     <div class="top-panel">
-        <div class="user-bar">
-            <span>👤 {{ usuario }}</span>
-            <a href="/logout" class="btn-sair">Sair</a>
+        <span class="user-info" onclick="irPara('menu')">🌳 Yvon Costa</span>
+        <div class="d-flex gap-2">
+            <span class="text-muted small align-self-center">{{ usuario }}</span>
+            <a href="/logout" class="text-danger small align-self-center text-decoration-none"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+
+    <div id="view-menu" class="view-section view-active">
+        <h5 class="text-white mb-3 px-2">Menu Principal</h5>
+        <div class="menu-grid">
+            <div class="menu-card" onclick="modoFazerChamada()">
+                <div class="menu-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div class="menu-title">Fazer Chamada</div>
+            </div>
+            <div class="menu-card" onclick="modoEditarChamada()">
+                <div class="menu-icon"><i class="fas fa-edit"></i></div>
+                <div class="menu-title">Editar Presença</div>
+            </div>
+            <div class="menu-card" onclick="irPara('menu-cadastros')">
+                <div class="menu-icon"><i class="fas fa-users-cog"></i></div>
+                <div class="menu-title">Cadastros</div>
+            </div>
+            <div class="menu-card" onclick="irPara('links')">
+                <div class="menu-icon"><i class="fas fa-table"></i></div>
+                <div class="menu-title">Planilhas</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-menu-cadastros" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="text-white mb-3">Gestão de Cadastros</h5>
+        <div class="d-grid gap-3">
+            <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('cadastro-rapido')">
+                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Só Nome)
+            </button>
+            <button class="btn btn-dark border-secondary p-3 text-start" onclick="modoEditarCadastro()">
+                <i class="fas fa-pencil-alt text-info me-2"></i> Editar Cadastro Existente
+            </button>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ5THz9ErhPoM5xAFRzT_ZoJ-Lxt3jfVcTOuTGeKK_Fi4pwg/viewform" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-external-link-alt text-success me-2"></i> Cadastro Completo (Google Forms)
+            </a>
+        </div>
+    </div>
+
+    <div id="view-chamada" class="view-section">
+        <div class="d-flex justify-content-between mb-3 align-items-center">
+            <button class="btn btn-outline-secondary btn-sm" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+            <h5 class="m-0" id="titulo-chamada">Chamada</h5>
+        </div>
+
+        <div class="input-group mb-3">
+            <select id="select-turma" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarTurma()">
+                <option value="" disabled selected>Selecione a Turma...</option>
+                {% for t in turmas %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="button" onclick="carregarTurmaManual()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+            <input type="date" id="data-picker" class="form-dark mb-0">
+            <button class="btn btn-outline-warning btn-sm" id="btn-buscar-presenca" onclick="buscarPresencaAnterior()" style="display:none;">Buscar</button>
+        </div>
+
+        <div id="lista-alunos-container">
+            <div class="text-center text-white mt-5">Selecione turma e data.</div>
         </div>
         
-        <select id="select-turma" class="form-select form-select-sm mb-2 bg-dark text-light border-secondary" onchange="mudarTurma()">
-            <option value="" disabled selected>Escolha a Turma...</option>
+        <div class="fab-container">
+            <button class="btn-fab bg-success text-white" onclick="enviarPresenca()"><i class="fas fa-check"></i></button>
+        </div>
+    </div>
+
+    <div id="view-cadastro-rapido" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="text-warning">Cadastro Rápido</h5>
+        <input type="text" id="cad-nome" class="form-dark" placeholder="Nome Completo">
+        <select id="cad-turma" class="form-dark">
+            {% for t in turmas %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-success w-100 mt-2" onclick="salvarCadastroRapido()">Salvar</button>
+    </div>
+
+    <div id="view-editar-cadastro-lista" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5>Selecione o Aluno:</h5>
+        <select id="select-turma-edit-cad" class="form-dark" onchange="carregarTurmaParaEdicaoCad()">
+            <option value="" disabled selected>Selecione a Turma...</option>
+            {% for t in turmas %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+        <div id="lista-alunos-edicao" class="mt-3"></div>
+    </div>
+
+    <div id="view-links" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="mb-3">Planilhas do Sistema</h5>
+        <div class="d-grid gap-3">
+            <a href="https://docs.google.com/spreadsheets/d/1qJsrj_-vAqC1oIb-YrN0VPMdnFbeki88_xvXwEci7xg/edit" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-database text-warning me-2"></i> Banco de Dados
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/1mF7WDCkY8Bh10hGkkFp8gfKrS9HoQa7ErKraTOb-aPM/edit" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-chart-bar text-success me-2"></i> Análise de Presença
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/17njX9mxmQj8ikhgve6LRVXVLOuahYp2NQoi69gmFQo8/edit" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-users text-info me-2"></i> Cadastro (Alunos Ativos)
+            </a>
+        </div>
+    </div>
+
+    <div id="modal-editar">
+        <h5 class="text-warning mb-3">Editando Aluno</h5>
+        <input type="hidden" id="edit-row-id">
+        
+        <span class="modal-label">Nome Completo</span> 
+        <input type="text" id="edit-nome" class="form-dark">
+        
+        <span class="modal-label">Data de Nascimento</span> 
+        <input type="text" id="edit-nasc" class="form-dark" placeholder="DD/MM/AAAA ou YYYY-MM-DD">
+        
+        <span class="modal-label">Contato do Evangelizando (Novo)</span> 
+        <input type="text" id="edit-contato-aluno" class="form-dark">
+
+        <span class="modal-label">Nome do Responsável</span> 
+        <input type="text" id="edit-resp" class="form-dark">
+        
+        <span class="modal-label">Contato do Responsável</span> 
+        <input type="text" id="edit-contato-resp" class="form-dark">
+        
+        <span class="modal-label">Turma</span> 
+        <select id="edit-turma" class="form-dark form-select">
             {% for t in turmas %}
             <option value="{{ t }}">{{ t }}</option>
             {% endfor %}
         </select>
 
-        <div class="d-flex gap-2">
-            <input type="date" id="data-picker" class="form-control form-control-sm bg-dark text-light border-secondary">
-            <button class="btn btn-sm btn-outline-danger" onclick="enviarSemAula()">Sem Aula</button>
-        </div>
-        <div class="text-end mt-1">
-            <small id="contador" class="text-muted">0 selecionados</small>
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-outline-secondary w-50" onclick="fecharModalEdicao()">Cancelar</button>
+            <button class="btn btn-success w-50" onclick="salvarEdicaoAluno()">Salvar</button>
         </div>
     </div>
 
-    <div class="container mt-3" id="lista-alunos">
-        <div class="text-center text-muted mt-5">Selecione uma turma para começar.</div>
-    </div>
-
-    <div class="fab-container">
-        <button class="fab btn-camera" onclick="abrirCamera()"><i class="fas fa-camera"></i></button>
-        <button class="fab btn-save" onclick="enviarPresenca()"><i class="fas fa-check"></i></button>
-    </div>
-
-    <div id="qr-overlay">
-        <div class="camera-header">
-            <button class="btn-close-cam" onclick="fecharCamera()"><i class="fas fa-times"></i></button>
-        </div>
-        <div id="reader"></div>
-        
-        <div id="detected-bar">
-            <div class="detected-info">
-                <span class="detected-label">Aluno Identificado</span>
-                <span class="detected-name" id="bar-name">...</span>
-            </div>
-            <button class="btn-speak-check" onclick="falarNomeAtual()">
-                <i class="fas fa-volume-up"></i>
-            </button>
-        </div>
-    </div>
-
-    <script>
-        const socket = io();
-        let alunosData = [];
-        let mapaIds = {}; 
-        let selecionados = new Set();
-        let turmaAtual = "";
-        let html5QrcodeScanner = null;
-        
-        // Variáveis para controlar o fluxo contínuo
-        let lastScannedId = null;
-        let lastScanTime = 0;
-        let currentDetectedName = ""; // Nome focado na barra
-        const SCAN_DELAY = 2000; // Tempo em ms para não ler o mesmo código seguidamente
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        // --- LOADING ---
-        function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
-        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
-
-        // --- AUTO-INIT ---
-        window.onload = function() {
-            const select = document.getElementById('select-turma');
-            if (select.options.length > 1) {
-                select.selectedIndex = 1;
-                mudarTurma();
-            }
-        }
-
-        // --- AUDIO ---
-        function playBeep() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1); 
-        }
-
-        function falarNome(texto) {
-            const utterance = new SpeechSynthesisUtterance(texto);
-            utterance.lang = 'pt-BR';
-            utterance.rate = 1.1;
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function falarNomeAtual() {
-            if (currentDetectedName) {
-                playBeep();
-                falarNome(currentDetectedName);
-            }
-        }
-
-        // --- SOCKETS ---
-        function mudarTurma() {
-            const t = document.getElementById('select-turma').value;
-            document.getElementById('lista-alunos').innerHTML = '<div class="text-center mt-5 text-success">Baixando lista... <i class="fas fa-circle-notch fa-spin"></i></div>';
-            socket.emit('selecionar_turma', { turma: t });
-        }
-
-        socket.on('dados_turma', (data) => {
-            turmaAtual = data.turma_nome;
-            alunosData = data.alunos;
-            mapaIds = data.mapa_ids;
-            document.getElementById('data-picker').value = data.data_default;
-            selecionados.clear();
-            renderizarLista();
-        });
-
-        socket.on('sucesso', (data) => { hideLoading(); alert(data.msg); selecionados.clear(); renderizarLista(); });
-        socket.on('erro', (msg) => { hideLoading(); alert(msg.msg); });
-
-        function renderizarLista() {
-            const container = document.getElementById('lista-alunos');
-            container.innerHTML = '';
-            alunosData.forEach(nome => {
-                const isSelected = selecionados.has(nome);
-                const div = document.createElement('div');
-                div.className = `aluno-card ${isSelected ? 'selected' : ''}`;
-                div.onclick = () => toggleAluno(nome);
-                div.innerHTML = `<span>${nome}</span><i class="fas fa-check check-icon"></i>`;
-                container.appendChild(div);
-            });
-            document.getElementById('contador').innerText = `${selecionados.size} marcados`;
-        }
-
-        function toggleAluno(nome) {
-            if (selecionados.has(nome)) selecionados.delete(nome); else selecionados.add(nome);
-            renderizarLista();
-        }
-
-        function checkSabado(dateStr) {
-            const parts = dateStr.split('-');
-            const diaCerto = new Date(parts[0], parts[1]-1, parts[2], 12, 0, 0);
-            return diaCerto.getDay() === 6;
-        }
-
-        function enviarPresenca() {
-            if (!turmaAtual) return alert("Selecione a turma!");
-            const dt = document.getElementById('data-picker').value;
-            if (!checkSabado(dt)) return alert("🚫 Esta data NÃO é um sábado!");
-            showLoading();
-            socket.emit('registrar_chamada', { tipo: 'presenca', turma_atual: turmaAtual, data: dt, presentes: Array.from(selecionados) });
-        }
-
-        function enviarSemAula() {
-            if (!turmaAtual) return alert("Selecione a turma!");
-            const dt = document.getElementById('data-picker').value;
-            if (!checkSabado(dt)) return alert("🚫 Esta data NÃO é um sábado!");
-            if(confirm("Confirmar SEM AULA?")) { showLoading(); socket.emit('registrar_chamada', { tipo: 'sem_aula', turma_atual: turmaAtual, data: dt }); }
-        }
-
-        // --- CÂMERA CONTÍNUA ---
-        function abrirCamera() {
-            if (!turmaAtual) return alert("Selecione uma turma primeiro!");
-            
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                alert("⚠️ USE HTTPS (NGROK) PARA CÂMERA FUNCIONAR");
-            }
-
-            document.getElementById('qr-overlay').style.display = 'flex';
-            
-            // Inicia o scanner
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0 
-            };
-            
-            // Nota: onScanSuccess é chamado repetidamente enquanto houver QR code
-            html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(err => {
-                alert("Erro câmera: " + err);
-                fecharCamera();
-            });
-        }
-
-        function fecharCamera() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('qr-overlay').style.display = 'none';
-                    document.getElementById('detected-bar').style.display = 'none';
-                }).catch(err => {
-                    document.getElementById('qr-overlay').style.display = 'none';
-                });
-            } else {
-                document.getElementById('qr-overlay').style.display = 'none';
-            }
-        }
-
-        function onScanSuccess(decodedText, decodedResult) {
-            const now = Date.now();
-            const idLido = decodedText.trim();
-
-            // Lógica para evitar ler o mesmo ID mil vezes por segundo
-            // Se for o mesmo ID e passaram menos de 2 segundos, ignora
-            if (idLido === lastScannedId && (now - lastScanTime < SCAN_DELAY)) {
-                return;
-            }
-
-            const nomeEncontrado = mapaIds[idLido];
-
-            if (nomeEncontrado) {
-                // Atualiza variáveis de controle
-                lastScannedId = idLido;
-                lastScanTime = now;
-                currentDetectedName = nomeEncontrado;
-
-                // 1. AUTO-SELEÇÃO: Marca o aluno imediatamente
-                if (!selecionados.has(nomeEncontrado)) {
-                    selecionados.add(nomeEncontrado);
-                    renderizarLista(); // Atualiza a contagem visualmente atrás da câmera
-                    // Vibraçãozinha pra confirmar leitura (se celular suportar)
-                    if (navigator.vibrate) navigator.vibrate(200);
-                }
-
-                // 2. MOSTRA BARRA INFERIOR
-                const bar = document.getElementById('detected-bar');
-                document.getElementById('bar-name').innerText = nomeEncontrado;
-                bar.style.display = 'flex';
-
-            } else {
-                // Se leu um QR Code inválido, não faz nada ou avisa levemente
-                console.log("QR Code desconhecido:", idLido);
-            }
-        }
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
