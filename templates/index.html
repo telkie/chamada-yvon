@@ -12,24 +12,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
     <style>
+        /* Estilos inline para garantir o funcionamento do modal, caso o CSS externo falhe ou demore */
         .modal-custom {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
             z-index: 2000;
             display: none;
-            align-items: center;
+            align-items: flex-start; /* Alinha no topo */
             justify-content: center;
-            overflow-y: auto;
+            overflow-y: auto; /* Permite rolagem */
+            padding-top: 40px; /* Espaço do topo */
+            padding-bottom: 40px; /* Espaço da base */
         }
         .modal-content-custom {
             background: #212529;
             border: 1px solid #444;
             border-radius: 10px;
             padding: 20px;
-            width: 90%;
+            width: 95%;
             max-width: 500px;
-            margin: 20px auto;
+            margin: 0 auto; /* Centraliza horizontalmente */
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
     </style>
@@ -76,10 +79,10 @@
         <h5 class="text-white mb-3">Gestão de Cadastros</h5>
         <div class="d-grid gap-3">
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('lista-alunos')">
-                <i class="fas fa-address-card text-primary me-2"></i> Meus Alunos (Fichas)
+                <i class="fas fa-address-card text-primary me-2"></i> Meus Evangelizandos (Fichas)
             </button>
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('cadastro-rapido')">
-                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Novo Aluno)
+                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Novo Evangelizando)
             </button>
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="modoEditarCadastro()">
                 <i class="fas fa-pencil-alt text-info me-2"></i> Editar Cadastro Existente
@@ -129,7 +132,7 @@
 
     <div id="view-editar-cadastro-lista" class="view-section">
         <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
-        <h5>Selecione o Aluno para Editar:</h5>
+        <h5>Selecione o Evangelizando para Editar:</h5>
         <select id="select-turma-edit-cad" class="form-dark" onchange="carregarTurmaParaEdicaoCad()">
             <option value="" disabled selected>Selecione a Turma...</option>
             {% for t in turmas %}
@@ -169,53 +172,53 @@
 
     <div id="modal-editar" class="modal-custom">
         <div class="modal-content-custom">
-            <h5 class="text-warning mb-3">Editando Aluno</h5>
+            <h5 class="text-warning mb-3">Editando Evangelizando</h5>
             <input type="hidden" id="edit-row-id">
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Nome Completo</span> 
-                <input type="text" id="edit-nome" class="form-dark">
+                <input type="text" id="edit-nome" class="form-dark mb-0">
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Data de Nascimento</span> 
-                <input type="text" id="edit-nasc" class="form-dark">
+                <input type="text" id="edit-nasc" class="form-dark mb-0" placeholder="DD/MM/AAAA">
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Contato do Evangelizando</span> 
-                <input type="text" id="edit-contato-aluno" class="form-dark">
+                <input type="text" id="edit-contato-aluno" class="form-dark mb-0">
             </div>
 
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Nome do Responsável</span> 
-                <input type="text" id="edit-resp" class="form-dark">
+                <input type="text" id="edit-resp" class="form-dark mb-0">
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Contato do Responsável</span> 
-                <input type="text" id="edit-contato-resp" class="form-dark">
+                <input type="text" id="edit-contato-resp" class="form-dark mb-0">
             </div>
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label">Turma</span> 
-                <select id="edit-turma" class="form-dark form-select">
+                <select id="edit-turma" class="form-dark form-select mb-0">
                     {% for t in turmas %}
                     <option value="{{ t }}">{{ t }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <hr class="border-secondary">
+            <hr class="border-secondary my-3">
             
-            <div class="mb-2">
+            <div class="mb-3">
                 <span class="modal-label text-info"><i class="fas fa-clipboard-list"></i> Obs. Cadastrais (Forms)</span> 
-                <textarea id="edit-obs-cadastral" class="form-dark" rows="2" placeholder="TEA, TDAH, Alergias..."></textarea>
+                <textarea id="edit-obs-cadastral" class="form-dark mb-0" rows="3" placeholder="TEA, TDAH, Alergias..."></textarea>
             </div>
 
-            <div class="mb-2">
-                <span class="modal-label text-warning"><i class="fas fa-sticky-note"></i> Obs. Evangelizador (Sua Planilha)</span> 
-                <textarea id="edit-obs-evangelizador" class="form-dark" rows="3" placeholder="Anotações internas sobre o aluno..."></textarea>
+            <div class="mb-3">
+                <span class="modal-label text-warning"><i class="fas fa-sticky-note"></i> Obs. Evangelizador</span> 
+                <textarea id="edit-obs-evangelizador" class="form-dark mb-0" rows="4" placeholder="Anotações internas..."></textarea>
             </div>
 
             <div class="d-flex gap-2 mt-4">
@@ -228,7 +231,7 @@
     <div id="modal-ficha" class="modal-custom">
         <div class="modal-content-custom">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Aluno</h5>
+                <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Evangelizando</h5>
                 <button class="btn btn-sm btn-outline-danger" onclick="fecharModalFicha()"><i class="fas fa-times"></i></button>
             </div>
             <div id="ficha-conteudo"></div>

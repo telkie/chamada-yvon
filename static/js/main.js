@@ -93,7 +93,7 @@ socket.on('dados_turma', (data) => {
         const container = document.getElementById('container-lista-fichas');
         container.innerHTML = '';
         if(alunosData.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted">Nenhum aluno encontrado.</div>';
+            container.innerHTML = '<div class="text-center text-muted">Nenhum evangelizando encontrado.</div>';
             return;
         }
         alunosData.forEach(nome => {
@@ -318,13 +318,13 @@ function abrirFicha(nome) {
             <div class="row mt-2">
                 <div class="col-6">
                     <div class="ficha-item">
-                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Resp:</span>
+                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Resp.:</span>
                         <a href="https://wa.me/55${limparTel(data.contato_resp)}" target="_blank" class="ficha-val text-info text-decoration-none">${data.contato_resp}</a>
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="ficha-item">
-                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Aluno:</span>
+                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Evang.:</span>
                         <a href="https://wa.me/55${limparTel(data.contato_aluno)}" target="_blank" class="ficha-val text-info text-decoration-none">${data.contato_aluno}</a>
                     </div>
                 </div>
