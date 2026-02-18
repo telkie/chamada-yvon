@@ -25,7 +25,7 @@ class GoogleManager:
                     # Limpa aspas e quebras de linha que podem vir do CSV/Excel
                     raw_turmas = str(row['Turma']).replace('"', '').replace('\n', '')
                     
-                    # Tenta separar por vírgula (padrão) ou ponto e vírgula
+                    # Tenta separar por ponto e vírgula ou vírgula
                     if ';' in raw_turmas:
                         return [t.strip() for t in raw_turmas.split(';') if t.strip()]
                     return [t.strip() for t in raw_turmas.split(',') if t.strip()]
@@ -34,17 +34,62 @@ class GoogleManager:
             print(f"Erro Login: {e}")
             return None
 
-    def obter_alunos(self, turma):
+    # --- NOVO: Obtém lista simples de alunos para o menu "Meus Alunos" ---
+    def obter_lista_alunos(self, turma):
         try:
             client = self.get_client()
             sh = client.open_by_key(Config.SHEET_ID_DB)
             ws = sh.worksheet(turma)
-            # Na planilha do Banco de Dados (que vem do QUERY), o Nome é a Coluna A (1)
+            # Coluna A (1) é o Nome no Banco de Dados
             nomes = ws.col_values(1)[1:] 
             return sorted([n for n in nomes if n])
         except Exception as e:
-            print(f"Erro ao ler alunos da turma '{turma}': {e}")
+            print(f"Erro lista alunos: {e}")
             return []
+
+    # --- NOVO: Obtém a ficha completa com as observações ---
+    def obter_ficha_aluno(self, turma, nome_aluno):
+        try:
+            client = self.get_client()
+            sh = client.open_by_key(Config.SHEET_ID_DB)
+            ws = sh.worksheet(turma)
+            
+            # Procura a célula que contém o nome exato
+            cell = ws.find(nome_aluno)
+            if not cell:
+                return None
+            
+            # Pega a linha inteira
+            row = ws.row_values(cell.row)
+            
+            # Função auxiliar para evitar erro de índice (caso a coluna esteja vazia no final)
+            def get(idx): return row[idx] if len(row) > idx else ""
+            
+            # Mapeamento baseado no Banco de Dados:
+            # A(0): Nome
+            # B(1): Nascimento
+            # C(2): Contato Aluno
+            # D(3): Responsável
+            # E(4): Contato Resp
+            # F(5): Obs. Cadastrais (Doenças/TEA/TDAH - Vindo do Forms)
+            # G(6): Obs. Evangelizador (Vindo da Planilha Individual)
+            
+            return {
+                'nome': get(0),
+                'nasc': get(1),
+                'contato_aluno': get(2),
+                'responsavel': get(3),
+                'contato_resp': get(4),
+                'obs_cadastral': get(5) if get(5) else "Nenhuma observação cadastrada.",
+                'obs_evangelizador': get(6) if get(6) else "Nenhuma anotação do evangelizador."
+            }
+        except Exception as e:
+            print(f"Erro ficha aluno: {e}")
+            return None
+
+    # --- Mantido para a função de Chamada ---
+    def obter_alunos(self, turma):
+        return self.obter_lista_alunos(turma)
 
     def recuperar_presenca(self, turma, data):
         try:
@@ -85,7 +130,7 @@ class GoogleManager:
 
             if linhas:
                 ws_log.append_rows(linhas)
-                # Aciona o Webhook de LOG (se houver um específico para isso, senão ignora)
+                # Webhook de log opcional
                 try: requests.get(Config.WEBHOOK_LOG_URL + "?p=1", timeout=1)
                 except: pass
                 
@@ -94,35 +139,34 @@ class GoogleManager:
             self.client = None 
             return False, f"Erro ao salvar: {str(e)}"
 
+    # --- CRUD: Busca dados na planilha BRUTA (Form Responses) para edição ---
     def buscar_dados_aluno(self, nome_aluno):
         try:
             client = self.get_client()
-            # Conecta na planilha bruta de RESPOSTAS DO FORMULÁRIO
+            # Conecta na planilha de CADASTRO (Fonte da verdade)
             ws = client.open_by_key(Config.SHEET_ID_CADASTRO).worksheet("Respostas ao formulário 1")
             
             # Coluna B (2) é o Nome Completo
             coluna_nomes = ws.col_values(2) 
             
             try:
-                # +1 porque lista começa em 0, mas planilha começa em 1
+                # +1 pois a lista começa em 0 e sheets em 1
                 row_index = coluna_nomes.index(nome_aluno) + 1
             except ValueError:
                 return False, "Aluno não encontrado."
 
             dados_linha = ws.row_values(row_index)
-            
-            # Função auxiliar para não dar erro se a linha estiver incompleta
             def get_val(idx): return dados_linha[idx] if len(dados_linha) > idx else ""
 
-            # MAPEAMENTO NOVO (Baseado nos seus arquivos):
-            # Col A (0): Carimbo
-            # Col B (1): Nome
-            # Col C (2): Nascimento
-            # Col D (3): Contato Evan (NOVO)
-            # Col E (4): Responsável
-            # Col F (5): Contato Resp
-            # Col G (6): Turma
-
+            # Mapeamento da Planilha de Respostas do Formulário:
+            # A(0): Carimbo
+            # B(1): Nome
+            # C(2): Nascimento
+            # D(3): Contato Aluno
+            # E(4): Responsável
+            # F(5): Contato Resp
+            # G(6): Turma
+            
             aluno_obj = {
                 'row_id': row_index,
                 'nome': get_val(1),
@@ -136,6 +180,7 @@ class GoogleManager:
         except Exception as e:
             return False, str(e)
 
+    # --- CRUD: Salva edição na planilha BRUTA ---
     def atualizar_cadastro(self, row_id, dados):
         try:
             client = self.get_client()
@@ -153,11 +198,9 @@ class GoogleManager:
                 limpar(dados['turma'])          # G
             ]]
             
-            # Usa USER_ENTERED para formatar datas e números automaticamente (evita o apóstrofe)
             ws.update(f"B{row_id}:G{row_id}", valores, value_input_option='USER_ENTERED')
             return True, "✅ Cadastro atualizado!"
         except Exception as e:
             return False, str(e)
 
-# Instância global
 google_service = GoogleManager()

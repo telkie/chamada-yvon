@@ -12,6 +12,7 @@ function irPara(viewId) {
     document.getElementById('view-' + viewId).classList.add('view-active');
 }
 
+// --- MODO CHAMADA ---
 function modoFazerChamada() {
     modoAtual = 'chamada';
     selecionados.clear();
@@ -44,7 +45,7 @@ function modoEditarCadastro() {
     irPara('editar-cadastro-lista');
 }
 
-// --- LÓGICA DE TURMA ---
+// --- LÓGICA DE TURMA (SOCKET) ---
 function carregarTurmaManual() {
     const t = document.getElementById('select-turma').value;
     if(!t) return alert("Selecione uma turma primeiro!");
@@ -74,9 +75,37 @@ function carregarTurmaParaEdicaoCad() {
     socket.emit('selecionar_turma', { turma: t, modo: 'editar_cadastro' });
 }
 
+// --- NOVA FUNÇÃO: Carregar lista para Fichas ---
+function carregarAlunosParaFicha() {
+    const t = document.getElementById('select-turma-ficha').value;
+    document.getElementById('container-lista-fichas').innerHTML = '<div class="text-center mt-3 text-muted">Carregando... <i class="fas fa-spinner fa-spin"></i></div>';
+    
+    // Usa o mesmo socket, mas com modo diferente
+    socket.emit('selecionar_turma', { turma: t, modo: 'visualizar_fichas' });
+}
+
+// --- RECEPTOR DE DADOS DO SOCKET ---
 socket.on('dados_turma', (data) => {
     alunosData = data.alunos;
-    if (data.modo === 'editar_cadastro') {
+    
+    if (data.modo === 'visualizar_fichas') {
+        // Renderiza lista para Fichas
+        const container = document.getElementById('container-lista-fichas');
+        container.innerHTML = '';
+        if(alunosData.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted">Nenhum aluno encontrado.</div>';
+            return;
+        }
+        alunosData.forEach(nome => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-dark border-secondary text-start p-3 text-white mb-2 w-100';
+            btn.innerHTML = `<i class="fas fa-user text-primary me-2"></i> ${nome}`;
+            btn.onclick = () => abrirFicha(nome);
+            container.appendChild(btn);
+        });
+
+    } else if (data.modo === 'editar_cadastro') {
+        // Renderiza lista para Edição
         const container = document.getElementById('lista-alunos-edicao');
         container.innerHTML = '';
         alunosData.forEach(nome => {
@@ -86,7 +115,9 @@ socket.on('dados_turma', (data) => {
             div.onclick = () => abrirModalEdicao(nome);
             container.appendChild(div);
         });
+
     } else {
+        // Renderiza lista para Chamada
         selecionados.clear();
         renderizarListaPresenca();
     }
@@ -127,23 +158,18 @@ socket.on('presenca_anterior_carregada', (data) => {
 });
 
 // --- ENVIAR PRESENÇA ---
-// --- ENVIAR PRESENÇA (Item 6: Validação de Sábado) ---
 function enviarPresenca() {
     if(!turmaAtual) return alert("Selecione a turma");
     const dt = document.getElementById('data-picker').value;
 
-    // VALIDAÇÃO DE SÁBADO
-    // Adiciona 'T12:00:00' para garantir que o fuso horário não mude o dia
+    // Validação de Sábado
     const dataObj = new Date(dt + 'T12:00:00');
-    const diaSemana = dataObj.getDay(); // 0=Domingo, 6=Sábado
-
-    if (diaSemana !== 6) {
+    if (dataObj.getDay() !== 6) {
         alert("🚫 Erro: A chamada só pode ser enviada aos Sábados!");
         return;
     }
 
-    if(!confirm(`Confirmar envio para ${turmaAtual} em ${dt}?`)) return;
-    
+    if(!confirm(`Confirmar envio?`)) return;
     document.getElementById('loading').style.display = 'flex';
     socket.emit('registrar_chamada', { tipo: 'presenca', turma_atual: turmaAtual, data: dt, presentes: Array.from(selecionados) });
 }
@@ -161,7 +187,8 @@ function salvarCadastroRapido() {
     if(!nome) return alert("Digite o nome");
     
     document.getElementById('loading').style.display = 'flex';
-    // Aviso visual extra pois o webhook pode levar uns 2 segundos
+    
+    // Feedback visual
     const btnSalvar = document.querySelector('#view-cadastro-rapido button');
     const textoOriginal = btnSalvar.innerText;
     btnSalvar.innerText = "Sincronizando...";
@@ -235,3 +262,96 @@ socket.on('erro', (msg) => {
     document.getElementById('loading').style.display = 'none';
     alert(msg.msg);
 });
+
+/* Substitua apenas a função abrirFicha dentro do main.js, ou se preferir, pode copiar o arquivo todo se não tiver editado mais nada.
+   Vou colocar aqui APENAS a função alterada para você não ter que caçar, mas lembre-se de atualizar no arquivo. */
+
+function abrirFicha(nome) {
+    const turma = document.getElementById('select-turma-ficha').value;
+    document.getElementById('loading').style.display = 'flex';
+    
+    document.getElementById('ficha-conteudo').innerHTML = '<div class="text-center text-white"><i class="fas fa-spinner fa-spin"></i> Buscando dados...</div>';
+    document.getElementById('modal-ficha').style.display = 'flex';
+
+    fetch('/ficha_aluno', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ turma: turma, nome: nome })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        
+        if(data.erro) {
+            document.getElementById('ficha-conteudo').innerHTML = `<div class="text-danger text-center">${data.erro}</div>`;
+            return;
+        }
+        
+        const html = `
+            <div class="mb-3 text-center">
+                <h4 class="text-white mb-0">${data.nome}</h4>
+                <small class="text-muted">${turma}</small>
+            </div>
+            
+            <div class="ficha-item">
+                <span class="ficha-label"><i class="fas fa-birthday-cake text-info"></i> Nascimento:</span>
+                <span class="ficha-val text-white">${data.nasc}</span>
+            </div>
+            
+            <hr class="border-secondary my-3">
+            
+            <div class="ficha-item">
+                <span class="ficha-label"><i class="fas fa-user-shield text-success"></i> Responsável:</span>
+                <span class="ficha-val text-white">${data.responsavel}</span>
+            </div>
+            
+            <div class="row mt-2">
+                <div class="col-6">
+                    <div class="ficha-item">
+                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Resp:</span>
+                        <a href="https://wa.me/55${limparTel(data.contato_resp)}" target="_blank" class="ficha-val text-info text-decoration-none">${data.contato_resp}</a>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="ficha-item">
+                        <span class="ficha-label"><i class="fab fa-whatsapp text-success"></i> Aluno:</span>
+                        <a href="https://wa.me/55${limparTel(data.contato_aluno)}" target="_blank" class="ficha-val text-info text-decoration-none">${data.contato_aluno}</a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-secondary my-3">
+            
+            <div class="ficha-item">
+                <span class="ficha-label text-info"><i class="fas fa-clipboard-list"></i> Obs. Cadastrais:</span>
+                <div class="obs-box text-white border border-info">
+                    ${data.obs_cadastral}
+                </div>
+            </div>
+            
+            <div class="ficha-item mt-3">
+                <span class="ficha-label text-warning"><i class="fas fa-sticky-note"></i> Obs. Evangelizador:</span>
+                <div class="obs-box text-white border border-warning">
+                    ${data.obs_evangelizador}
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('ficha-conteudo').innerHTML = html;
+    })
+    .catch(err => {
+        document.getElementById('loading').style.display = 'none';
+        alert("Erro ao buscar ficha: " + err);
+        fecharModalFicha();
+    });
+}
+
+function fecharModalFicha() {
+    document.getElementById('modal-ficha').style.display = 'none';
+}
+
+// Helper para limpar telefone pro link do WhatsApp
+function limparTel(tel) {
+    if(!tel) return "";
+    return tel.replace(/\D/g, '');
+}

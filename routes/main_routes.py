@@ -5,11 +5,41 @@ import requests
 
 main_bp = Blueprint('main', __name__)
 
+# Mapeamento de Links para o botão "Banco de Dados"
+# Admin vê o original, turmas veem suas planilhas individuais (Visualização)
+LINKS_BANCO_DADOS = {
+    "Admin": "https://docs.google.com/spreadsheets/d/1qJsrj_-vAqC1oIb-YrN0VPMdnFbeki88_xvXwEci7xg/edit", # Planilha Mestre
+    "Bebês (0 a 2)": "https://docs.google.com/spreadsheets/d/1kzRXpwDkKJdIGfm5iHBAIn4btn2y5G_xUWB4b_gqjGs/edit",
+    "Maternal (3 e 4)": "https://docs.google.com/spreadsheets/d/14lokWrqkCNCUZoDCy7rauADIvjbI75H2xH8yYCLlfVo/edit",
+    "Jardim (5 e 6)": "https://docs.google.com/spreadsheets/d/11kyhJQECwO-sdlz7gu40oQh1TQHIgjXUDlhEelj2Wlk/edit",
+    "1° Ciclo (7 e 8)": "https://docs.google.com/spreadsheets/d/1oiNDX0DmVU6ZV-HGg7D10uMY-IcPniNNoZvWxs8hpHI/edit",
+    "2° Ciclo (9 e 10)": "https://docs.google.com/spreadsheets/d/1psPfh2g21XtDynTyOqosY8hkCg2wSFnMyumNAzWAoTU/edit",
+    "3° Ciclo (11 e 12)": "https://docs.google.com/spreadsheets/d/1AsfH6JpzNF_Mmh87vcxVSlKQ87Fh3d3AjyJ8Tz0HBpc/edit",
+    "Pré-juventude (13 e 14)": "https://docs.google.com/spreadsheets/d/1Zz-2Z1Vf2XTgYoVvdjRV_UySP5pljq-CNpvfQuzSaFM/edit",
+    "Juventude (15+)": "https://docs.google.com/spreadsheets/d/1tYwlQydWhUyZvS_Rek1SqG9jAa5-F3FUhaOcc_dHf8M/edit"
+}
+
 @main_bp.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
         return render_template('login.html')
-    return render_template('index.html', usuario=session['usuario'], turmas=session['turmas'])
+    
+    usuario = session['usuario']
+    turmas = session['turmas']
+    
+    # Lógica para definir qual link de Banco de Dados exibir
+    link_db = "#"
+    if usuario == "Admin":
+        link_db = LINKS_BANCO_DADOS["Admin"]
+    elif turmas:
+        # Pega a primeira turma da lista do usuário.
+        # Se um usuário tiver várias turmas, ele vai para a planilha da primeira.
+        # (Futuramente poderia ser um modal para escolher, mas por enquanto simplificamos)
+        turma_principal = turmas[0]
+        if turma_principal in LINKS_BANCO_DADOS:
+            link_db = LINKS_BANCO_DADOS[turma_principal]
+
+    return render_template('index.html', usuario=usuario, turmas=turmas, link_db=link_db)
 
 @main_bp.route('/login', methods=['POST'])
 def login():
@@ -30,6 +60,23 @@ def logout():
     session.clear()
     return redirect(url_for('main.index'))
 
+# --- NOVO: Rota para buscar detalhes da ficha do aluno ---
+@main_bp.route('/ficha_aluno', methods=['POST'])
+def ficha_aluno():
+    if 'usuario' not in session:
+        return jsonify({'erro': 'Não autorizado'}), 403
+        
+    dados = request.json
+    turma = dados.get('turma')
+    nome = dados.get('nome')
+    
+    ficha = google_service.obter_ficha_aluno(turma, nome)
+    
+    if ficha:
+        return jsonify(ficha)
+    return jsonify({'erro': 'Aluno não encontrado no Banco de Dados.'}), 404
+
+# --- Cadastro Rápido com Webhook (Mantido) ---
 @main_bp.route('/cadastro_rapido', methods=['POST'])
 def cadastro_rapido():
     if 'usuario' not in session: 
@@ -39,8 +86,7 @@ def cadastro_rapido():
     nome = dados.get('nome')
     turma = dados.get('turma')
     
-    # 1. Mapeamento dos IDs do Novo Formulário
-    # Preenchemos campos vazios com "." para evitar erro de "Campo Obrigatório"
+    # Preenchimento para o Google Forms
     form_data = {
         "entry.1091823087": nome,               # Nome
         "entry.883252145": turma,               # Turma
@@ -51,15 +97,14 @@ def cadastro_rapido():
     }
     
     try:
-        # 2. Envia para o Google Forms
+        # 1. Envia para o Forms
         requests.post(Config.FORM_URL, data=form_data)
         
-        # 3. ACIONA O WEBHOOK PARA SINCRONIZAR NA HORA! ⚡
-        # Timeout de 5s para não travar o site caso o script demore
+        # 2. Aciona o Webhook de Sincronização
         try:
             requests.post(Config.SYNC_WEBHOOK_URL, timeout=5)
         except:
-            pass # Se der timeout, vida que segue, o Forms já salvou.
+            pass # Ignora timeout do webhook
 
         return jsonify({'msg': 'Cadastro realizado e sincronizado com sucesso!'})
         
