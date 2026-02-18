@@ -214,15 +214,18 @@ function salvarCadastroRapido() {
     });
 }
 
-// --- EDITAR CADASTRO (CRUD) ---
+// --- EDITAR CADASTRO (CRUD COM NOVOS CAMPOS) ---
 function abrirModalEdicao(nome) {
     document.getElementById('loading').style.display = 'flex';
-    socket.emit('solicitar_dados_aluno', { nome: nome });
+    // Precisamos enviar a turma para buscar a obs do evangelizador na planilha certa
+    const turma = document.getElementById('select-turma-edit-cad').value;
+    socket.emit('solicitar_dados_aluno', { nome: nome, turma_contexto: turma });
 }
 
 socket.on('dados_aluno_recebidos', (dados) => {
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('modal-editar').style.display = 'block';
+    // Mostra o modal (agora usando display flex ou block conforme css do modal-custom)
+    document.getElementById('modal-editar').style.display = 'flex';
     
     document.getElementById('edit-row-id').value = dados.row_id;
     document.getElementById('edit-nome').value = dados.nome;
@@ -231,6 +234,10 @@ socket.on('dados_aluno_recebidos', (dados) => {
     document.getElementById('edit-resp').value = dados.responsavel;
     document.getElementById('edit-contato-resp').value = dados.contato_resp;
     document.getElementById('edit-turma').value = dados.turma;
+
+    // PREENCHE OS NOVOS CAMPOS DE OBSERVAÇÃO
+    document.getElementById('edit-obs-cadastral').value = dados.obs_cadastral || "";
+    document.getElementById('edit-obs-evangelizador').value = dados.obs_evangelizador || "";
 });
 
 function fecharModalEdicao() { document.getElementById('modal-editar').style.display = 'none'; }
@@ -247,7 +254,11 @@ function salvarEdicaoAluno() {
             contato_aluno: document.getElementById('edit-contato-aluno').value,
             responsavel: document.getElementById('edit-resp').value,
             contato_resp: document.getElementById('edit-contato-resp').value,
-            turma: document.getElementById('edit-turma').value
+            turma: document.getElementById('edit-turma').value,
+
+            // ENVIA OS NOVOS CAMPOS PARA O PYTHON
+            obs_cadastral: document.getElementById('edit-obs-cadastral').value,
+            obs_evangelizador: document.getElementById('edit-obs-evangelizador').value
         }
     });
 }
@@ -263,15 +274,14 @@ socket.on('erro', (msg) => {
     alert(msg.msg);
 });
 
-/* Substitua apenas a função abrirFicha dentro do main.js, ou se preferir, pode copiar o arquivo todo se não tiver editado mais nada.
-   Vou colocar aqui APENAS a função alterada para você não ter que caçar, mas lembre-se de atualizar no arquivo. */
-
+// --- NOVA FUNCIONALIDADE: FICHA DO ALUNO (COM COR AZUL/CIANO) ---
 function abrirFicha(nome) {
     const turma = document.getElementById('select-turma-ficha').value;
     document.getElementById('loading').style.display = 'flex';
     
+    // Abre o modal primeiro com "Carregando..."
     document.getElementById('ficha-conteudo').innerHTML = '<div class="text-center text-white"><i class="fas fa-spinner fa-spin"></i> Buscando dados...</div>';
-    document.getElementById('modal-ficha').style.display = 'flex';
+    document.getElementById('modal-ficha').style.display = 'flex'; 
 
     fetch('/ficha_aluno', {
         method: 'POST',

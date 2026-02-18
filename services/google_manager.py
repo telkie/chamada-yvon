@@ -7,6 +7,16 @@ from config import Config
 class GoogleManager:
     def __init__(self):
         self.client = None
+        self.MAPA_TURMAS_IDS = {
+            "Bebês (0 a 2)": "1kzRXpwDkKJdIGfm5iHBAIn4btn2y5G_xUWB4b_gqjGs",
+            "Maternal (3 e 4)": "14lokWrqkCNCUZoDCy7rauADIvjbI75H2xH8yYCLlfVo",
+            "Jardim (5 e 6)": "11kyhJQECwO-sdlz7gu40oQh1TQHIgjXUDlhEelj2Wlk",
+            "1° Ciclo (7 e 8)": "1oiNDX0DmVU6ZV-HGg7D10uMY-IcPniNNoZvWxs8hpHI",
+            "2° Ciclo (9 e 10)": "1psPfh2g21XtDynTyOqosY8hkCg2wSFnMyumNAzWAoTU",
+            "3° Ciclo (11 e 12)": "1AsfH6JpzNF_Mmh87vcxVSlKQ87Fh3d3AjyJ8Tz0HBpc",
+            "Pré-juventude (13 e 14)": "1Zz-2Z1Vf2XTgYoVvdjRV_UySP5pljq-CNpvfQuzSaFM",
+            "Juventude (15+)": "1tYwlQydWhUyZvS_Rek1SqG9jAa5-F3FUhaOcc_dHf8M"
+        }
 
     def get_client(self):
         if self.client is None:
@@ -22,10 +32,7 @@ class GoogleManager:
             records = ws.get_all_records()
             for row in records:
                 if str(row['Login']) == usuario and str(row['Senha']) == senha:
-                    # Limpa aspas e quebras de linha que podem vir do CSV/Excel
                     raw_turmas = str(row['Turma']).replace('"', '').replace('\n', '')
-                    
-                    # Tenta separar por ponto e vírgula ou vírgula
                     if ';' in raw_turmas:
                         return [t.strip() for t in raw_turmas.split(';') if t.strip()]
                     return [t.strip() for t in raw_turmas.split(',') if t.strip()]
@@ -34,45 +41,26 @@ class GoogleManager:
             print(f"Erro Login: {e}")
             return None
 
-    # --- NOVO: Obtém lista simples de alunos para o menu "Meus Alunos" ---
     def obter_lista_alunos(self, turma):
         try:
             client = self.get_client()
             sh = client.open_by_key(Config.SHEET_ID_DB)
             ws = sh.worksheet(turma)
-            # Coluna A (1) é o Nome no Banco de Dados
             nomes = ws.col_values(1)[1:] 
             return sorted([n for n in nomes if n])
-        except Exception as e:
-            print(f"Erro lista alunos: {e}")
-            return []
+        except: return []
 
-    # --- NOVO: Obtém a ficha completa com as observações ---
     def obter_ficha_aluno(self, turma, nome_aluno):
         try:
             client = self.get_client()
             sh = client.open_by_key(Config.SHEET_ID_DB)
             ws = sh.worksheet(turma)
             
-            # Procura a célula que contém o nome exato
             cell = ws.find(nome_aluno)
-            if not cell:
-                return None
+            if not cell: return None
             
-            # Pega a linha inteira
             row = ws.row_values(cell.row)
-            
-            # Função auxiliar para evitar erro de índice (caso a coluna esteja vazia no final)
             def get(idx): return row[idx] if len(row) > idx else ""
-            
-            # Mapeamento baseado no Banco de Dados:
-            # A(0): Nome
-            # B(1): Nascimento
-            # C(2): Contato Aluno
-            # D(3): Responsável
-            # E(4): Contato Resp
-            # F(5): Obs. Cadastrais (Doenças/TEA/TDAH - Vindo do Forms)
-            # G(6): Obs. Evangelizador (Vindo da Planilha Individual)
             
             return {
                 'nome': get(0),
@@ -80,92 +68,35 @@ class GoogleManager:
                 'contato_aluno': get(2),
                 'responsavel': get(3),
                 'contato_resp': get(4),
-                'obs_cadastral': get(5) if get(5) else "Nenhuma observação cadastrada.",
-                'obs_evangelizador': get(6) if get(6) else "Nenhuma anotação do evangelizador."
+                'obs_cadastral': get(5) if get(5) else "Nenhuma.",
+                'obs_evangelizador': get(6) if get(6) else "Nenhuma."
             }
-        except Exception as e:
-            print(f"Erro ficha aluno: {e}")
-            return None
+        except: return None
 
-    # --- Mantido para a função de Chamada ---
-    def obter_alunos(self, turma):
-        return self.obter_lista_alunos(turma)
-
-    def recuperar_presenca(self, turma, data):
+    def buscar_dados_aluno(self, nome_aluno, turma_contexto=None):
         try:
             client = self.get_client()
-            ws_log = client.open_by_key(Config.SHEET_ID_DB).worksheet("Log_Chamada")
-            records = ws_log.get_all_records()
-            dt_fmt = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m/%Y")
-            
-            presentes = set()
-            for row in records:
-                if str(row.get('Turma')) == turma and str(row.get('Data')) == dt_fmt:
-                     if row.get('Status') == 'P':
-                         presentes.add(row.get('Aluno'))
-            return list(presentes)
-        except Exception as e:
-            print(f"Erro recuperar chamada: {e}")
-            return []
-
-    def salvar_chamada(self, turma, data, presentes, tipo):
-        try:
-            client = self.get_client()
-            ws_log = client.open_by_key(Config.SHEET_ID_DB).worksheet("Log_Chamada")
-            dt_fmt = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m/%Y")
-            
-            todos = self.obter_alunos(turma)
-            linhas = []
-
-            if tipo == 'sem_aula':
-                for aluno in todos:
-                    linhas.append([f"{turma}-{aluno}-{dt_fmt}", dt_fmt, turma, aluno, "SA", ""])
-            else:
-                set_presentes = set(presentes)
-                for aluno in todos:
-                    if aluno in set_presentes:
-                        linhas.append([f"{turma}-{aluno}-{dt_fmt}-P", dt_fmt, turma, aluno, "P", ""])
-                    else:
-                        linhas.append([f"{turma}-{aluno}-{dt_fmt}-F", dt_fmt, turma, aluno, "F", ""])
-
-            if linhas:
-                ws_log.append_rows(linhas)
-                # Webhook de log opcional
-                try: requests.get(Config.WEBHOOK_LOG_URL + "?p=1", timeout=1)
-                except: pass
-                
-            return True, "✅ Dados salvos com sucesso!"
-        except Exception as e:
-            self.client = None 
-            return False, f"Erro ao salvar: {str(e)}"
-
-    # --- CRUD: Busca dados na planilha BRUTA (Form Responses) para edição ---
-    def buscar_dados_aluno(self, nome_aluno):
-        try:
-            client = self.get_client()
-            # Conecta na planilha de CADASTRO (Fonte da verdade)
-            ws = client.open_by_key(Config.SHEET_ID_CADASTRO).worksheet("Respostas ao formulário 1")
-            
-            # Coluna B (2) é o Nome Completo
-            coluna_nomes = ws.col_values(2) 
+            ws_cad = client.open_by_key(Config.SHEET_ID_CADASTRO).worksheet("Respostas ao formulário 1")
+            coluna_nomes = ws_cad.col_values(2) 
             
             try:
-                # +1 pois a lista começa em 0 e sheets em 1
                 row_index = coluna_nomes.index(nome_aluno) + 1
             except ValueError:
-                return False, "Aluno não encontrado."
+                return False, "Aluno não encontrado no Cadastro Geral."
 
-            dados_linha = ws.row_values(row_index)
+            dados_linha = ws_cad.row_values(row_index)
             def get_val(idx): return dados_linha[idx] if len(dados_linha) > idx else ""
 
-            # Mapeamento da Planilha de Respostas do Formulário:
-            # A(0): Carimbo
-            # B(1): Nome
-            # C(2): Nascimento
-            # D(3): Contato Aluno
-            # E(4): Responsável
-            # F(5): Contato Resp
-            # G(6): Turma
+            obs_evangelizador = ""
+            if turma_contexto and turma_contexto in self.MAPA_TURMAS_IDS:
+                try:
+                    id_individual = self.MAPA_TURMAS_IDS[turma_contexto]
+                    ws_ind = client.open_by_key(id_individual).sheet1
+                    cell_ind = ws_ind.find(nome_aluno)
+                    if cell_ind:
+                        obs_evangelizador = ws_ind.cell(cell_ind.row, 7).value 
+                except Exception as e:
+                    print(f"Erro ao buscar obs evangelizador: {e}")
             
             aluno_obj = {
                 'row_id': row_index,
@@ -174,33 +105,83 @@ class GoogleManager:
                 'contato_aluno': get_val(3),
                 'responsavel': get_val(4),
                 'contato_resp': get_val(5),
-                'turma': get_val(6)
+                'turma': get_val(6),
+                'obs_cadastral': get_val(7),
+                'obs_evangelizador': obs_evangelizador
             }
             return True, aluno_obj
         except Exception as e:
             return False, str(e)
 
-    # --- CRUD: Salva edição na planilha BRUTA ---
     def atualizar_cadastro(self, row_id, dados):
         try:
             client = self.get_client()
-            ws = client.open_by_key(Config.SHEET_ID_CADASTRO).worksheet("Respostas ao formulário 1")
+            ws_cad = client.open_by_key(Config.SHEET_ID_CADASTRO).worksheet("Respostas ao formulário 1")
             
             def limpar(val): return str(val).lstrip("'")
 
-            # Atualiza Colunas B até G (Nome até Turma)
-            valores = [[
-                limpar(dados['nome']),          # B
-                limpar(dados['nasc']),          # C
-                limpar(dados['contato_aluno']), # D
-                limpar(dados['responsavel']),   # E
-                limpar(dados['contato_resp']),  # F
-                limpar(dados['turma'])          # G
+            valores_cad = [[
+                limpar(dados['nome']),
+                limpar(dados['nasc']),
+                limpar(dados['contato_aluno']),
+                limpar(dados['responsavel']),
+                limpar(dados['contato_resp']),
+                limpar(dados['turma']),
+                limpar(dados['obs_cadastral'])
             ]]
             
-            ws.update(f"B{row_id}:G{row_id}", valores, value_input_option='USER_ENTERED')
-            return True, "✅ Cadastro atualizado!"
+            ws_cad.update(f"B{row_id}:H{row_id}", valores_cad, value_input_option='USER_ENTERED')
+            
+            turma = dados['turma']
+            if turma in self.MAPA_TURMAS_IDS:
+                try:
+                    id_ind = self.MAPA_TURMAS_IDS[turma]
+                    ws_ind = client.open_by_key(id_ind).sheet1
+                    cell = ws_ind.find(dados['nome'])
+                    
+                    if cell:
+                        ws_ind.update_cell(cell.row, 7, dados['obs_evangelizador'])
+                except Exception as e:
+                    print(f"Erro ao salvar obs evangelizador: {e}")
+
+            return True, "✅ Cadastro e Observações atualizados!"
         except Exception as e:
             return False, str(e)
+
+    def obter_alunos(self, turma): return self.obter_lista_alunos(turma)
+    
+    def recuperar_presenca(self, turma, data):
+        try:
+            client = self.get_client()
+            ws_log = client.open_by_key(Config.SHEET_ID_DB).worksheet("Log_Chamada")
+            records = ws_log.get_all_records()
+            dt_fmt = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m/%Y")
+            presentes = set()
+            for row in records:
+                if str(row.get('Turma')) == turma and str(row.get('Data')) == dt_fmt and row.get('Status') == 'P':
+                     presentes.add(row.get('Aluno'))
+            return list(presentes)
+        except: return []
+
+    def salvar_chamada(self, turma, data, presentes, tipo):
+        try:
+            client = self.get_client()
+            ws_log = client.open_by_key(Config.SHEET_ID_DB).worksheet("Log_Chamada")
+            dt_fmt = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m/%Y")
+            todos = self.obter_alunos(turma)
+            linhas = []
+            if tipo == 'sem_aula':
+                for aluno in todos: linhas.append([f"{turma}-{aluno}-{dt_fmt}", dt_fmt, turma, aluno, "SA", ""])
+            else:
+                set_presentes = set(presentes)
+                for aluno in todos:
+                    status = "P" if aluno in set_presentes else "F"
+                    linhas.append([f"{turma}-{aluno}-{dt_fmt}-{status}", dt_fmt, turma, aluno, status, ""])
+            if linhas:
+                ws_log.append_rows(linhas)
+                try: requests.get(Config.WEBHOOK_LOG_URL + "?p=1", timeout=1)
+                except: pass
+            return True, "✅ Dados salvos com sucesso!"
+        except Exception as e: return False, f"Erro: {str(e)}"
 
 google_service = GoogleManager()

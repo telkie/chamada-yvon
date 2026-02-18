@@ -12,13 +12,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
     <style>
-        /* CSS Inline mantido para garantir funcionamento dos Modais se o cache do CSS atrapalhar */
         .modal-custom {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85);
             z-index: 2000;
-            display: none; /* Escondido por padrão! */
+            display: none;
             align-items: center;
             justify-content: center;
             overflow-y: auto;
@@ -66,8 +65,8 @@
                 <div class="menu-title">Cadastros</div>
             </div>
             <div class="menu-card" onclick="irPara('links')">
-                <div class="menu-icon"><i class="fas fa-table"></i></div>
-                <div class="menu-title">Planilhas</div>
+                <div class="menu-icon"><i class="fas fa-link"></i></div>
+                <div class="menu-title">Links</div>
             </div>
         </div>
     </div>
@@ -154,7 +153,7 @@
 
     <div id="view-links" class="view-section">
         <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
-        <h5 class="mb-3">Planilhas do Sistema</h5>
+        <h5 class="mb-3">Links do Sistema</h5>
         <div class="d-grid gap-3">
             <a href="{{ link_db }}" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
                 <i class="fas fa-database text-warning me-2"></i> Banco de Dados (Sua Turma)
@@ -163,7 +162,7 @@
                 <i class="fas fa-chart-bar text-success me-2"></i> Análise de Presença
             </a>
             <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ5THz9ErhPoM5xAFRzT_ZoJ-Lxt3jfVcTOuTGeKK_Fi4pwg/viewform" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
-                <i class="fas fa-external-link-alt text-primary me-2"></i> Cadastro Longo (Google Forms)
+                <i class="fas fa-external-link-alt text-primary me-2"></i> Cadastro Completo
             </a>
         </div>
     </div>
@@ -173,27 +172,51 @@
             <h5 class="text-warning mb-3">Editando Aluno</h5>
             <input type="hidden" id="edit-row-id">
             
-            <span class="modal-label">Nome Completo</span> 
-            <input type="text" id="edit-nome" class="form-dark">
+            <div class="mb-2">
+                <span class="modal-label">Nome Completo</span> 
+                <input type="text" id="edit-nome" class="form-dark">
+            </div>
             
-            <span class="modal-label">Data de Nascimento</span> 
-            <input type="text" id="edit-nasc" class="form-dark" placeholder="DD/MM/AAAA ou YYYY-MM-DD">
+            <div class="mb-2">
+                <span class="modal-label">Data de Nascimento</span> 
+                <input type="text" id="edit-nasc" class="form-dark">
+            </div>
             
-            <span class="modal-label">Contato do Evangelizando</span> 
-            <input type="text" id="edit-contato-aluno" class="form-dark">
+            <div class="mb-2">
+                <span class="modal-label">Contato do Evangelizando</span> 
+                <input type="text" id="edit-contato-aluno" class="form-dark">
+            </div>
 
-            <span class="modal-label">Nome do Responsável</span> 
-            <input type="text" id="edit-resp" class="form-dark">
+            <div class="mb-2">
+                <span class="modal-label">Nome do Responsável</span> 
+                <input type="text" id="edit-resp" class="form-dark">
+            </div>
             
-            <span class="modal-label">Contato do Responsável</span> 
-            <input type="text" id="edit-contato-resp" class="form-dark">
+            <div class="mb-2">
+                <span class="modal-label">Contato do Responsável</span> 
+                <input type="text" id="edit-contato-resp" class="form-dark">
+            </div>
             
-            <span class="modal-label">Turma</span> 
-            <select id="edit-turma" class="form-dark form-select">
-                {% for t in turmas %}
-                <option value="{{ t }}">{{ t }}</option>
-                {% endfor %}
-            </select>
+            <div class="mb-2">
+                <span class="modal-label">Turma</span> 
+                <select id="edit-turma" class="form-dark form-select">
+                    {% for t in turmas %}
+                    <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <hr class="border-secondary">
+            
+            <div class="mb-2">
+                <span class="modal-label text-info"><i class="fas fa-clipboard-list"></i> Obs. Cadastrais (Forms)</span> 
+                <textarea id="edit-obs-cadastral" class="form-dark" rows="2" placeholder="TEA, TDAH, Alergias..."></textarea>
+            </div>
+
+            <div class="mb-2">
+                <span class="modal-label text-warning"><i class="fas fa-sticky-note"></i> Obs. Evangelizador (Sua Planilha)</span> 
+                <textarea id="edit-obs-evangelizador" class="form-dark" rows="3" placeholder="Anotações internas sobre o aluno..."></textarea>
+            </div>
 
             <div class="d-flex gap-2 mt-4">
                 <button class="btn btn-outline-secondary w-50" onclick="fecharModalEdicao()">Cancelar</button>
@@ -208,9 +231,7 @@
                 <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Aluno</h5>
                 <button class="btn btn-sm btn-outline-danger" onclick="fecharModalFicha()"><i class="fas fa-times"></i></button>
             </div>
-            <div id="ficha-conteudo">
-                <div class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>
-            </div>
+            <div id="ficha-conteudo"></div>
             <button class="btn btn-secondary w-100 mt-3" onclick="fecharModalFicha()">Fechar</button>
         </div>
     </div>
