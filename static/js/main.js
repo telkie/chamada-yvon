@@ -365,3 +365,16 @@ function limparTel(tel) {
     if(!tel) return "";
     return tel.replace(/\D/g, '');
 }
+
+function forcarAtualizacaoFichas() {
+    const t = document.getElementById('select-turma-ficha').value;
+    if(!t) return alert("Selecione uma turma primeiro!");
+    
+    // Feedback visual de que está forçando
+    document.getElementById('container-lista-fichas').innerHTML = '<div class="text-center mt-3 text-warning">Forçando atualização... <i class="fas fa-sync fa-spin"></i></div>';
+    
+    // Pequeno delay e chama o socket novamente
+    setTimeout(() => {
+        socket.emit('selecionar_turma', { turma: t, modo: 'visualizar_fichas' });
+    }, 500);
+}

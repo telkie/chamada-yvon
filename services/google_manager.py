@@ -47,7 +47,10 @@ class GoogleManager:
             sh = client.open_by_key(Config.SHEET_ID_DB)
             ws = sh.worksheet(turma)
             nomes = ws.col_values(1)[1:] 
-            return sorted([n for n in nomes if n])
+            
+            # O segredo está no 'key=str.lower'
+            # Ele finge que é tudo minúsculo só na hora de organizar!
+            return sorted([n for n in nomes if n], key=str.lower)
         except: return []
 
     def obter_ficha_aluno(self, turma, nome_aluno):

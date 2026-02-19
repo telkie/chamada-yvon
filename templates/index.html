@@ -142,15 +142,22 @@
         <div id="lista-alunos-edicao" class="mt-3"></div>
     </div>
 
-    <div id="view-lista-alunos" class="view-section">
+<div id="view-lista-alunos" class="view-section">
         <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
         <h5 class="text-white">Selecione para ver a Ficha:</h5>
-        <select id="select-turma-ficha" class="form-dark form-select mb-3" onchange="carregarAlunosParaFicha()">
-            <option value="" disabled selected>Selecione a Turma...</option>
-            {% for t in turmas %}
-            <option value="{{ t }}">{{ t }}</option>
-            {% endfor %}
-        </select>
+        
+        <div class="input-group mb-3">
+            <select id="select-turma-ficha" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarAlunosParaFicha()">
+                <option value="" disabled selected>Selecione a Turma...</option>
+                {% for t in turmas %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="button" onclick="forcarAtualizacaoFichas()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        
         <div id="container-lista-fichas" class="d-grid gap-2"></div>
     </div>
 
