@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yvon Costa 🌳</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        .modal-custom {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        .modal-content-custom {
+            background: #212529;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+            width: 95%;
+            max-width: 500px;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner-border text-success" role="status"></div>
+        <div class="mt-2 text-white">Processando...</div>
+    </div>
+
+    <div class="top-panel">
+        <span class="user-info" onclick="irPara('menu')">🌳 Yvon Costa</span>
+        <div class="d-flex gap-2">
+            <span class="text-muted small align-self-center">{{ usuario }}</span>
+            <a href="/logout" class="text-danger small align-self-center text-decoration-none"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+
+    <div id="view-menu" class="view-section view-active">
+        <h5 class="text-white mb-3 px-2">Menu Principal</h5>
+        <div class="menu-grid">
+            <div class="menu-card" onclick="modoFazerChamada()">
+                <div class="menu-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div class="menu-title">Fazer Chamada</div>
+            </div>
+            <div class="menu-card" onclick="modoEditarChamada()">
+                <div class="menu-icon"><i class="fas fa-edit"></i></div>
+                <div class="menu-title">Editar Presença</div>
+            </div>
+            <div class="menu-card" onclick="irPara('menu-cadastros')">
+                <div class="menu-icon"><i class="fas fa-users-cog"></i></div>
+                <div class="menu-title">Cadastros</div>
+            </div>
+            <div class="menu-card" onclick="irPara('links')">
+                <div class="menu-icon"><i class="fas fa-link"></i></div>
+                <div class="menu-title">Links</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-menu-cadastros" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="text-white mb-3">Gestão de Cadastros</h5>
+        <div class="d-grid gap-3">
+            <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('lista-alunos')">
+                <i class="fas fa-address-card text-primary me-2"></i> Meus Alunos (Fichas)
+            </button>
+            <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('cadastro-rapido')">
+                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Novo Aluno)
+            </button>
+            <button class="btn btn-dark border-secondary p-3 text-start" onclick="modoEditarCadastro()">
+                <i class="fas fa-pencil-alt text-info me-2"></i> Editar Cadastro Existente
+            </button>
+        </div>
+    </div>
+
+    <div id="view-chamada" class="view-section">
+        <div class="d-flex justify-content-between mb-3 align-items-center">
+            <button class="btn btn-outline-secondary btn-sm" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+            <h5 class="m-0" id="titulo-chamada">Chamada</h5>
+        </div>
+        
+        <div class="input-group mb-3">
+            <select id="select-turma" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarTurma()">
+                <option value="" disabled selected>Selecione a Turma...</option>
+                {% for t in turmas %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="button" onclick="carregarTurmaManual()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        
+        <div class="d-flex gap-2 mb-3">
+            <input type="date" id="data-picker" class="form-dark mb-0">
+            <button class="btn btn-outline-warning btn-sm" id="btn-buscar-presenca" onclick="buscarPresencaAnterior()" style="display:none;">Buscar</button>
+        </div>
+        <div id="lista-alunos-container">
+            <div class="text-center text-white mt-5">Selecione turma e data.</div>
+        </div>
+        <div class="fab-container">
+            <button class="btn-fab bg-success text-white" onclick="enviarPresenca()"><i class="fas fa-check"></i></button>
+        </div>
+    </div>
+
+    <div id="view-cadastro-rapido" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="text-warning">Cadastro Rápido</h5>
+        <input type="text" id="cad-nome" class="form-dark" placeholder="Nome Completo">
+        <select id="cad-turma" class="form-dark form-select">
+            {% for t in turmas %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-success w-100 mt-2" onclick="salvarCadastroRapido()">Salvar</button>
+    </div>
+
+    <div id="view-editar-cadastro-lista" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5>Selecione o Aluno para Editar:</h5>
+        
+        <div class="input-group mb-3">
+            <select id="select-turma-edit-cad" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarTurmaParaEdicaoCad()">
+                <option value="" disabled selected>Selecione a Turma...</option>
+                {% for t in turmas %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="button" onclick="forcarAtualizacaoEdicao()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        
+        <div id="lista-alunos-edicao" class="mt-3"></div>
+    </div>
+
+    <div id="view-lista-alunos" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="text-white">Selecione para ver a Ficha:</h5>
+        
+        <div class="input-group mb-3">
+            <select id="select-turma-ficha" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarAlunosParaFicha()">
+                <option value="" disabled selected>Selecione a Turma...</option>
+                {% for t in turmas %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="button" onclick="forcarAtualizacaoFichas()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+        
+        <div id="container-lista-fichas" class="d-grid gap-2"></div>
+    </div>
+
+    <div id="view-links" class="view-section">
+        <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <h5 class="mb-3">Links do Sistema</h5>
+        <div class="d-grid gap-3">
+            <a href="{{ link_db }}" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-database text-warning me-2"></i> Banco de Dados (Sua Turma)
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/1mF7WDCkY8Bh10hGkkFp8gfKrS9HoQa7ErKraTOb-aPM/edit" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-chart-bar text-success me-2"></i> Análise de Presença
+            </a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ5THz9ErhPoM5xAFRzT_ZoJ-Lxt3jfVcTOuTGeKK_Fi4pwg/viewform" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-external-link-alt text-primary me-2"></i> Cadastro Completo
+            </a>
+        </div>
+    </div>
+
+    <div id="modal-editar" class="modal-custom">
+        <div class="modal-content-custom">
+            <h5 class="text-warning mb-3">Editando Aluno</h5>
+            <input type="hidden" id="edit-row-id">
+            <input type="hidden" id="edit-nome-antigo">
+            
+            <div class="mb-3">
+                <span class="modal-label">Nome Completo</span> 
+                <input type="text" id="edit-nome" class="form-dark mb-0">
+            </div>
+            
+            <div class="mb-3">
+                <span class="modal-label">Data de Nascimento</span> 
+                <input type="text" id="edit-nasc" class="form-dark mb-0" placeholder="DD/MM/AAAA">
+            </div>
+            
+            <div class="mb-3">
+                <span class="modal-label">Contato do Evangelizando</span> 
+                <input type="text" id="edit-contato-aluno" class="form-dark mb-0">
+            </div>
+
+            <div class="mb-3">
+                <span class="modal-label">Nome do Responsável</span> 
+                <input type="text" id="edit-resp" class="form-dark mb-0">
+            </div>
+            
+            <div class="mb-3">
+                <span class="modal-label">Contato do Responsável</span> 
+                <input type="text" id="edit-contato-resp" class="form-dark mb-0">
+            </div>
+            
+            <div class="mb-3">
+                <span class="modal-label">Turma</span> 
+                <select id="edit-turma" class="form-dark form-select mb-0">
+                    {% for t in turmas %}
+                    <option value="{{ t }}">{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <hr class="border-secondary my-3">
+            
+            <div class="mb-3">
+                <span class="modal-label text-info"><i class="fas fa-clipboard-list"></i> Obs. Cadastrais (Forms)</span> 
+                <textarea id="edit-obs-cadastral" class="form-dark mb-0" rows="3" placeholder="TEA, TDAH, Alergias..."></textarea>
+            </div>
+
+            <div class="mb-3">
+                <span class="modal-label text-warning"><i class="fas fa-sticky-note"></i> Obs. Evangelizador</span> 
+                <textarea id="edit-obs-evangelizador" class="form-dark mb-0" rows="4" placeholder="Anotações internas..."></textarea>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button class="btn btn-outline-secondary w-50" onclick="fecharModalEdicao()">Cancelar</button>
+                <button class="btn btn-success w-50" onclick="salvarEdicaoAluno()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ficha" class="modal-custom">
+        <div class="modal-content-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Aluno</h5>
+                <button class="btn btn-sm btn-outline-danger" onclick="fecharModalFicha()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="ficha-conteudo"></div>
+            <button class="btn btn-secondary w-100 mt-3" onclick="fecharModalFicha()">Fechar</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
