@@ -77,6 +77,7 @@ def ficha_aluno():
     return jsonify({'erro': 'Aluno não encontrado no Banco de Dados.'}), 404
 
 # --- Cadastro Rápido com Webhook (Mantido) ---
+# --- Cadastro Rápido com Webhook ---
 @main_bp.route('/cadastro_rapido', methods=['POST'])
 def cadastro_rapido():
     if 'usuario' not in session: 
@@ -85,13 +86,18 @@ def cadastro_rapido():
     dados = request.json
     nome = dados.get('nome')
     turma = dados.get('turma')
+    # Pega o contato que veio do JS
+    contato = dados.get('contato_aluno', '').strip()
+    
+    # Se deixou em branco, manda o ponto. Se preencheu, manda o número.
+    contato_final = contato if contato else "."
     
     # Preenchimento para o Google Forms
     form_data = {
         "entry.1091823087": nome,               # Nome
         "entry.883252145": turma,               # Turma
         "entry.477279343": "2026-01-01",        # Nascimento (Placeholder)
-        "entry.2141494783": ".",                # Contato Evan (Placeholder)
+        "entry.2141494783": contato_final,      # Contato Evan (AGORA É REAL)
         "entry.146137968": ".",                 # Nome Resp (Placeholder)
         "entry.2118960068": "."                 # Contato Resp (Placeholder)
     }

@@ -180,7 +180,9 @@ socket.on('sucesso', (msg) => {
 
 function salvarCadastroRapido() {
     const nome = document.getElementById('cad-nome').value;
+    const contato = document.getElementById('cad-contato').value; // Captura o contato
     const turma = document.getElementById('cad-turma').value;
+    
     if(!nome) return alert("Digite o nome");
     
     document.getElementById('loading').style.display = 'flex';
@@ -192,7 +194,8 @@ function salvarCadastroRapido() {
     fetch('/cadastro_rapido', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ nome: nome, turma: turma })
+        // Agora envia o contato_aluno junto com nome e turma
+        body: JSON.stringify({ nome: nome, turma: turma, contato_aluno: contato })
     })
     .then(res => res.json())
     .then(data => {
@@ -205,6 +208,7 @@ function salvarCadastroRapido() {
         } else {
             alert("✅ Cadastrado e Sincronizado!");
             document.getElementById('cad-nome').value = "";
+            document.getElementById('cad-contato').value = ""; // Limpa o campo após salvar
         }
     });
 }

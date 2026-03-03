@@ -78,14 +78,17 @@
         <h5 class="text-white mb-3">Gestão de Cadastros</h5>
         <div class="d-grid gap-3">
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('lista-alunos')">
-                <i class="fas fa-address-card text-primary me-2"></i> Meus Alunos (Fichas)
+                <i class="fas fa-address-card text-primary me-2"></i> Meus Evangelizandos (Fichas)
             </button>
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="irPara('cadastro-rapido')">
-                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Novo Aluno)
+                <i class="fas fa-bolt text-warning me-2"></i> Cadastro Rápido (Novo Evangelizando)
             </button>
             <button class="btn btn-dark border-secondary p-3 text-start" onclick="modoEditarCadastro()">
                 <i class="fas fa-pencil-alt text-info me-2"></i> Editar Cadastro Existente
             </button>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ5THz9ErhPoM5xAFRzT_ZoJ-Lxt3jfVcTOuTGeKK_Fi4pwg/viewform" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
+                <i class="fas fa-external-link-alt text-primary me-2"></i> Cadastro Completo
+            </a>
         </div>
     </div>
 
@@ -122,7 +125,10 @@
     <div id="view-cadastro-rapido" class="view-section">
         <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
         <h5 class="text-warning">Cadastro Rápido</h5>
-        <input type="text" id="cad-nome" class="form-dark" placeholder="Nome Completo">
+        
+        <input type="text" id="cad-nome" class="form-dark mb-2" placeholder="Nome Completo">
+        <input type="text" id="cad-contato" class="form-dark mb-2" placeholder="Contato do Evangelizando">
+        
         <select id="cad-turma" class="form-dark form-select">
             {% for t in turmas %}
             <option value="{{ t }}">{{ t }}</option>
@@ -133,7 +139,7 @@
 
     <div id="view-editar-cadastro-lista" class="view-section">
         <button class="btn btn-outline-secondary btn-sm mb-3" onclick="irPara('menu-cadastros')"><i class="fas fa-arrow-left"></i> Voltar</button>
-        <h5>Selecione o Aluno para Editar:</h5>
+        <h5>Selecione o evangelizando para Editar:</h5>
         
         <div class="input-group mb-3">
             <select id="select-turma-edit-cad" class="form-dark form-select" style="margin-bottom:0 !important;" onchange="carregarTurmaParaEdicaoCad()">
@@ -179,15 +185,12 @@
             <a href="https://docs.google.com/spreadsheets/d/1mF7WDCkY8Bh10hGkkFp8gfKrS9HoQa7ErKraTOb-aPM/edit" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
                 <i class="fas fa-chart-bar text-success me-2"></i> Análise de Presença
             </a>
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeJ5THz9ErhPoM5xAFRzT_ZoJ-Lxt3jfVcTOuTGeKK_Fi4pwg/viewform" target="_blank" class="btn btn-dark border-secondary p-3 text-start">
-                <i class="fas fa-external-link-alt text-primary me-2"></i> Cadastro Completo
-            </a>
         </div>
     </div>
 
     <div id="modal-editar" class="modal-custom">
         <div class="modal-content-custom">
-            <h5 class="text-warning mb-3">Editando Aluno</h5>
+            <h5 class="text-warning mb-3">Editando Evangelizando</h5>
             <input type="hidden" id="edit-row-id">
             <input type="hidden" id="edit-nome-antigo">
             
@@ -247,7 +250,7 @@
     <div id="modal-ficha" class="modal-custom">
         <div class="modal-content-custom">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Aluno</h5>
+                <h5 class="text-warning m-0"><i class="fas fa-id-card"></i> Ficha do Evangelizanod</h5>
                 <button class="btn btn-sm btn-outline-danger" onclick="fecharModalFicha()"><i class="fas fa-times"></i></button>
             </div>
             <div id="ficha-conteudo"></div>
